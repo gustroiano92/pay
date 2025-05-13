@@ -1,17 +1,74 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 
 <head>
     <meta charset="utf-8">
     <title>Pagamentos ao Vovô</title>
-    <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 
+    <!-- Meta tags essenciais para mobile -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="theme-color" content="#4f46e5"> <!-- Cor do tema (índigo) -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+    <!-- Pré-carregamento de fontes -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <!-- Ícones Material Design -->
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
+
+    <!-- Tailwind CSS via CDN (versão otimizada para mobile) -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,line-clamp"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+
+    <!-- CSS customizado -->
+    <style>
+        html {
+            -webkit-tap-highlight-color: transparent;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            overscroll-behavior-y: contain;
+        }
+    </style>
 </head>
 
-<body>
+<body class="bg-gray-50 antialiased">
     <div id="app"></div>
-    <script src="/bundle.js"></script>
+
+    <!-- Carrega o bundle de forma assíncrona -->
+    <script src="/bundle.js" defer></script>
+
+    <!-- Fallback para caso JavaScript esteja desabilitado -->
+    <noscript>
+        <div class="fixed inset-0 bg-white z-50 flex items-center justify-center p-4">
+            <div class="text-center max-w-md">
+                <h1 class="text-2xl font-bold text-gray-800 mb-2">JavaScript necessário</h1>
+                <p class="text-gray-600 mb-4">Este aplicativo requer JavaScript para funcionar corretamente. Por favor,
+                    habilite o JavaScript no seu navegador.</p>
+                <a href="https://enable-javascript.com/" class="text-indigo-600 font-medium">Como habilitar
+                    JavaScript</a>
+            </div>
+        </div>
+    </noscript>
 </body>
 
 </html>
