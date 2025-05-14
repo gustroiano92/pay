@@ -43,7 +43,7 @@
             <div class="flex justify-between items-center mb-1">
                 <span class="text-xs font-medium text-gray-500">Progresso</span>
                 <span class="text-xs font-semibold text-indigo-600">{{ Math.round((totalPaid / totalAmount) * 100)
-                }}%</span>
+                    }}%</span>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-2">
                 <div class="bg-indigo-600 h-2 rounded-full" :style="{ width: `${(totalPaid / totalAmount) * 100}%` }">
@@ -211,7 +211,21 @@
         },
         computed: {
             sortedPayments() {
-                return [...this.payments].sort((a, b) => new Date(b.date) - new Date(a.date))
+                return [...this.payments].sort((a, b) => {
+                    // Primeiro ordena por date
+                    const dateA = new Date(a.date);
+                    const dateB = new Date(b.date);
+
+                    if (dateA - dateB !== 0) {
+                        return dateB - dateA; // Ordena por date (decrescente)
+                    }
+
+                    // Se as datas forem iguais, ordena por createdAt
+                    const createdAtA = new Date(a.createdAt);
+                    const createdAtB = new Date(b.createdAt);
+
+                    return createdAtB - createdAtA; // Ordena por createdAt (decrescente)
+                });
             },
             filteredPayments() {
                 let filtered = this.sortedPayments
