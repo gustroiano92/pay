@@ -9,7 +9,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <h1 class="text-xl font-bold text-gray-800 ml-2">Pagamentos</h1>
+                    <h1 class="text-xl font-bold text-gray-800 ml-2">VôPay</h1>
                 </div>
                 <div class="text-sm text-gray-500">{{ formatDate(new Date()) }}</div>
             </div>
@@ -43,7 +43,7 @@
             <div class="flex justify-between items-center mb-1">
                 <span class="text-xs font-medium text-gray-500">Progresso</span>
                 <span class="text-xs font-semibold text-indigo-600">{{ Math.round((totalPaid / totalAmount) * 100)
-                    }}%</span>
+                }}%</span>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-2">
                 <div class="bg-indigo-600 h-2 rounded-full" :style="{ width: `${(totalPaid / totalAmount) * 100}%` }">
@@ -193,7 +193,7 @@
                 activeTab: 'form',
                 searchQuery: '',
                 currentPage: 1,
-                itemsPerPage: 5,
+                itemsPerPage: 100,
                 totalAmount: 12000,
                 payments: [],
                 newPayment: {
@@ -330,9 +330,16 @@
             },
 
             formatDate(dateString) {
-                const options = { day: '2-digit', month: '2-digit', year: 'numeric' }
-                return new Date(dateString).toLocaleDateString('pt-BR', options)
+                if (!dateString) return '-'
+                const formatter = new Intl.DateTimeFormat('pt-BR', {
+                    timeZone: 'UTC',
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                })
+                return formatter.format(new Date(dateString))
             }
+
         },
         async mounted() {
             await this.loadPayments()
