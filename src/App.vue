@@ -1,271 +1,654 @@
 <template>
-    <div class="min-h-screen bg-gray-50 p-4" v-if="!showSetup">
-        <header class="mb-6 sticky top-0 bg-gray-50 pt-2 pb-4 z-10">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-indigo-600" fill="none"
-                        viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <h1 class="text-xl font-bold text-gray-800 ml-2">{{ title || '...' }}</h1>
-                </div>
-                <div class="text-sm text-gray-500">{{ formatDate(new Date()) }}</div>
-            </div>
-        </header>
+    <v-app>
+        <v-toolbar flat density="comfortable" class="bg-white" elevation="1">
+            <v-avatar size="36" class="ml-4 mr-3" color="primary-lighten-4">
+                <v-icon icon="mdi-finance" color="primary" size="24" />
+            </v-avatar>
+            <v-toolbar-title class="text-h6 font-weight-light text-grey-darken-3">
+                {{ title || 'Pay' }}
+            </v-toolbar-title>
+            <v-spacer />
+            <v-btn size="small" v-if="!isAuthenticated" icon="mdi-lock-outline" variant="text" color="primary"
+                @click="showLoginDialog = true" />
+            <v-btn size="small" v-if="isAuthenticated" icon="mdi-cog" variant="text" color="primary"
+                @click="showSettingsDialog = true" />
+        </v-toolbar>
 
-        <div class="mb-6 overflow-x-auto pb-2">
-            <div class="flex space-x-3 w-max">
-                <div class="bg-white rounded-lg shadow-sm p-4 w-40 flex-shrink-0 border-l-4 border-red-500">
-                    <p class="text-xs text-gray-500">Total Devido</p>
-                    <p class="text-lg font-semibold">R$ {{ formatCurrency(totalAmount) }}</p>
-                </div>
-                <div class="bg-white rounded-lg shadow-sm p-4 w-40 flex-shrink-0 border-l-4 border-green-500">
-                    <p class="text-xs text-gray-500">Total Pago</p>
-                    <p class="text-lg font-semibold">R$ {{ formatCurrency(totalPaid) }}</p>
-                </div>
-                <div class="bg-white rounded-lg shadow-sm p-4 w-40 flex-shrink-0 border-l-4 border-blue-500">
-                    <p class="text-xs text-gray-500">Restante</p>
-                    <p class="text-lg font-semibold">R$ {{ formatCurrency(remainingAmount) }}</p>
-                </div>
-            </div>
-        </div>
 
-        <div class="bg-white rounded-lg shadow-sm p-4 mb-4">
-            <div class="flex justify-between items-center mb-1">
-                <span class="text-xs font-medium text-gray-500">Progresso</span>
-                <span class="text-xs font-semibold text-indigo-600">{{ totalAmount > 0 ? Math.round((totalPaid /
-                    totalAmount) * 100) : 0 }}%</span>
-            </div>
-            <div class="w-full bg-gray-200 rounded-full h-2">
-                <div class="bg-indigo-600 h-2 rounded-full"
-                    :style="{ width: `${totalAmount > 0 ? (totalPaid / totalAmount) * 100 : 0}%` }"></div>
-            </div>
-        </div>
+        <v-main class="bg-grey-lighten-5">
+            <v-container fluid class="pa-6 pa-md-8">
+                <!-- Summary Section -->
+                <v-row class="mb-8">
+                    <v-col v-for="item in summaryItems" :key="item.label" cols="12" sm="6" md="3">
+                        <v-card flat rounded="lg" class="pa-2" elevation="2">
+                            <v-card-item>
+                                <v-row align="center" no-gutters>
+                                    <v-col cols="auto" class="mr-3">
+                                        <v-avatar size="40" rounded="md" :color="`${item.color}-lighten-4`">
+                                            <v-icon :icon="item.icon" :color="item.color" size="24" />
+                                        </v-avatar>
+                                    </v-col>
+                                    <v-col>
+                                        <v-card-title class="text-subtitle-1 font-weight-medium text-grey-darken-3">
+                                            {{ item.label }}
+                                        </v-card-title>
+                                        <v-card-text class="pa-0">
+                                            <div :class="`text-h6 font-weight-bold text-${item.color}-darken-2`">
+                                                {{ item.value }}
+                                            </div>
+                                            <div class="text-caption text-grey-darken-1">{{ item.subLabel }}</div>
+                                        </v-card-text>
+                                    </v-col>
+                                </v-row>
+                            </v-card-item>
+                        </v-card>
+                    </v-col>
+                </v-row>
 
-        <div class="flex justify-between items-center mb-4">
-            <h2 class="text-lg font-medium text-gray-700">Histórico</h2>
-            <button v-if="isAdmin" @click="showModal = true"
-                class="py-2 px-4 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none">
-                Novo Pagamento
-            </button>
-        </div>
-
-        <ul v-if="payments.length > 0" class="space-y-2 mb-6">
-            <li v-for="(payment, index) in payments" :key="index"
-                class="bg-white rounded-lg shadow-sm p-3 flex justify-between items-start">
-                <div>
-                    <p class="font-medium text-gray-900">R$ {{ formatCurrency(payment.amount) }}</p>
-                    <p class="text-xs text-gray-500">{{ formatDate(payment.date) }}</p>
-                    <p v-if="payment.notes" class="text-xs text-gray-500 mt-1">{{ payment.notes }}</p>
-                </div>
-                <button v-if="isAdmin" @click="removePayment(index)" class="text-red-500 hover:text-red-700 p-1"
-                    :disabled="loading">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                </button>
-            </li>
-        </ul>
-
-        <div v-if="payments.length === 0 && !loading" class="text-center py-8 bg-white rounded-lg shadow-sm mb-6">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mx-auto text-gray-400" fill="none"
-                viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <h3 class="mt-2 text-sm font-medium text-gray-900">Nenhum pagamento</h3>
-            <p class="mt-1 text-xs text-gray-500">Registre seu primeiro pagamento</p>
-        </div>
-
-        <teleport to="body">
-            <div v-if="showModal" class="fixed inset-0 flex items-center justify-center z-50">
-                <div class="absolute inset-0 bg-black opacity-50"></div>
-                <div class="bg-white rounded-lg shadow-lg w-full max-w-md mx-auto relative p-6">
-                    <button @click="showModal = false" class="absolute top-3 right-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-500 hover:text-gray-700"
-                            fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                    <form @submit.prevent="addPayment" class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Valor</label>
-                            <input v-model.number="newPayment.amount" type="number" min="0" step="0.01"
-                                class="block w-full pl-10 pr-3 py-2 text-sm border-gray-300 rounded-md"
-                                placeholder="0,00" />
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Data</label>
-                            <input v-model="newPayment.date" type="date"
-                                class="block w-full py-2 px-3 text-sm border-gray-300 rounded-md" />
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Observações</label>
-                            <textarea v-model="newPayment.notes" rows="2"
-                                class="block w-full py-2 px-3 text-sm border-gray-300 rounded-md"
-                                placeholder="Detalhes..."></textarea>
-                        </div>
-                        <button type="submit"
-                            class="w-full flex justify-center items-center py-2 px-4 rounded-md text-sm font-medium text-white bg-indigo-600"
-                            :disabled="loading">
-                            <svg v-if="loading" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
-                                    stroke-width="4" />
-                                <path class="opacity-75" fill="currentColor"
-                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                            </svg>
-                            {{ loading ? 'Salvando...' : 'Registrar' }}
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </teleport>
-    </div>
-
-    <teleport to="body">
-        <div v-if="showSetup" class="fixed inset-0 flex items-center justify-center z-50">
-            <div class="absolute inset-0 bg-black opacity-50"></div>
-            <div class="bg-white rounded-lg shadow-lg w-full max-w-md mx-auto relative p-6">
-                <form @submit.prevent="createBlobWithData" class="space-y-4">
-                    <h2 class="text-lg font-semibold text-gray-800 mb-2">Criar novo controle</h2>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Título</label>
-                        <input v-model="setup.title" type="text" required
-                            class="block w-full py-2 px-3 text-sm border-gray-300 rounded-md"
-                            placeholder="Ex: Pagamento do Vô" />
+                <!-- Transaction History Section -->
+                <section>
+                    <div class="d-flex align-center mb-6">
+                        <v-icon start icon="mdi-history" color="primary" size="24" />
+                        <h2 class="text-h5 font-weight-medium text-primary ml-2">
+                            Histórico de Transações
+                        </h2>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Valor Total Devido</label>
-                        <input v-model.number="setup.totalAmount" type="number" required min="1" step="0.01"
-                            class="block w-full py-2 px-3 text-sm border-gray-300 rounded-md" placeholder="Ex: 12000" />
-                    </div>
-                    <button type="submit"
-                        class="w-full py-2 px-4 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 text-sm"
-                        :disabled="loading">
-                        {{ loading ? 'Criando...' : 'Criar' }}
-                    </button>
-                </form>
-            </div>
-        </div>
-    </teleport>
+
+                    <v-skeleton-loader v-if="loading" type="list-item-avatar-two-line@5" class="mb-6 bg-white"
+                        rounded="lg" />
+
+                    <v-card v-else-if="payments.length === 0" flat rounded="lg" class="text-center py-12" elevation="2">
+                        <v-icon icon="mdi-archive-alert-outline" size="64" color="blue-grey-lighten-1" />
+                        <v-card-text class="text-h6 text-blue-grey-darken-2 font-weight-regular mt-4">
+                            Nenhuma transação encontrada.
+                        </v-card-text>
+                        <v-card-subtitle class="text-body-2 text-blue-grey-darken-1">
+                            Adicione sua primeira transação com <v-icon size="small">mdi-plus-circle-outline</v-icon>.
+                        </v-card-subtitle>
+                    </v-card>
+
+                    <v-expansion-panels v-else v-model="activePanel" variant="accordion" flat>
+                        <v-expansion-panel v-for="([month, group], idx) in sortedGroupedPayments" :key="month"
+                            :value="idx" class="my-2" elevation="2" rounded="lg">
+                            <v-expansion-panel-title class="bg-grey-lighten-4">
+                                <v-container fluid class="pa-0">
+                                    <v-row align="center" no-gutters>
+                                        <v-col cols="4" class="text-subtitle-1 font-weight-medium">
+                                            {{ month }}
+                                        </v-col>
+                                        <v-col cols="4" class="text-center text-body-2">
+                                            {{ group.items.length }} transaç{{ group.items.length === 1 ? 'ão' : 'ões'
+                                            }}
+                                        </v-col>
+                                        <v-col cols="4" class="text-right">
+                                            <v-chip color="primary" variant="flat" size="small"
+                                                class="font-weight-bold">
+                                                {{ formatCurrency(group.total) }}
+                                            </v-chip>
+                                        </v-col>
+                                    </v-row>
+                                </v-container>
+                            </v-expansion-panel-title>
+                            <v-expansion-panel-text>
+                                <v-card flat>
+                                    <v-list density="compact">
+                                        <template v-for="(p, idx) in group.items" :key="p.id">
+                                            <v-list-item class="py-2">
+                                                <template #title>
+                                                    <span class="text-body-1">{{ p.formattedAmount }}</span>
+                                                </template>
+                                                <template #subtitle>
+                                                    <div class="d-flex align-center gap-2">
+                                                        <span class="text-caption">{{ p.formattedDate }}</span>
+                                                        <span v-if="p.notes" class="text-caption d-flex align-center">
+                                                            <v-icon size="small"
+                                                                class="mr-1">mdi-comment-text-outline</v-icon>
+                                                            {{ p.notes }}
+                                                        </span>
+                                                    </div>
+                                                </template>
+                                                <template v-if="isAuthenticated" #append>
+                                                    <v-btn icon="mdi-trash-can-outline" color="error" variant="text"
+                                                        size="small" @click.stop="confirmRemovePayment(p)" />
+                                                </template>
+                                            </v-list-item>
+                                            <v-divider v-if="idx < group.items.length - 1" class="mx-4 my-1"
+                                                thickness="1" />
+                                        </template>
+                                    </v-list>
+                                </v-card>
+                            </v-expansion-panel-text>
+                        </v-expansion-panel>
+                    </v-expansion-panels>
+                </section>
+            </v-container>
+
+            <!-- Floating Action Button -->
+            <v-fab v-if="isAuthenticated" icon="mdi-plus" color="primary" size="large" class="mr-6 mb-6"
+                location="bottom end" fixed app elevation="4" @click="showModal = true" />
+
+            <!-- Snackbar -->
+            <v-snackbar v-model="snackbar.show" :color="snackbar.color" timeout="3000" location="top" variant="flat"
+                rounded="pill" elevation="4">
+                <v-icon start class="mr-2"
+                    :icon="snackbar.icon || (snackbar.color === 'success' ? 'mdi-check-circle' : 'mdi-alert-circle')" />
+                <span class="font-weight-medium">{{ snackbar.message }}</span>
+                <template #actions>
+                    <v-btn variant="text" @click="snackbar.show = false" class="text-none">Fechar</v-btn>
+                </template>
+            </v-snackbar>
+
+            <!-- New Transaction Dialog -->
+            <v-dialog v-model="showModal" max-width="520" persistent scrollable>
+                <v-card flat rounded="lg" elevation="2">
+                    <v-card-title class="d-flex align-center pa-4 bg-primary-lighten-5">
+                        <v-icon start color="primary" class="mr-2">mdi-plus-circle-outline</v-icon>
+                        <span class="text-h6 font-weight-medium text-primary">Nova Transação</span>
+                        <v-spacer />
+                        <v-btn icon="mdi-close" variant="text" density="comfortable" @click="cancelNewPayment" />
+                    </v-card-title>
+                    <v-divider />
+                    <v-card-text class="pt-6">
+                        <v-form ref="form" v-model="formValid" @submit.prevent="addPayment">
+                            <v-text-field v-model.number="newPayment.amount" label="Valor da Transação" prefix="R$"
+                                type="number"
+                                :rules="[v => !!v || 'Valor é obrigatório', v => v > 0 || 'Valor deve ser positivo']"
+                                required variant="outlined" density="compact" class="mb-4"
+                                prepend-inner-icon="mdi-currency-brl" />
+                            <v-menu v-model="dateMenu" :close-on-content-click="false" transition="scale-transition">
+                                <template #activator="{ props }">
+                                    <v-text-field v-model="newPayment.date" label="Data da Transação" readonly
+                                        v-bind="props" :rules="[v => !!v || 'Data é obrigatória']" variant="outlined"
+                                        density="compact" class="mb-4" append-inner-icon="mdi-calendar" />
+                                </template>
+                                <v-date-picker v-model="newPayment.date" locale="pt-br" color="primary" elevation="2"
+                                    @update:model-value="dateMenu = false" />
+                            </v-menu>
+                            <v-textarea v-model="newPayment.notes" label="Detalhes (Opcional)" variant="outlined"
+                                density="compact" rows="3" auto-grow prepend-inner-icon="mdi-information-outline"
+                                counter="100" />
+                        </v-form>
+                    </v-card-text>
+                    <v-divider />
+                    <v-card-actions class="pa-4">
+                        <v-btn variant="text" @click="cancelNewPayment" class="text-none">Cancelar</v-btn>
+                        <v-spacer />
+                        <v-btn color="primary" :loading="loading" :disabled="!formValid" @click="addPayment"
+                            variant="flat" class="text-none px-6" min-width="120">
+                            Adicionar
+                        </v-btn>
+                    </v-card-actions>
+                </v-card>
+            </v-dialog>
+
+            <!-- Setup Dialog -->
+            <v-dialog v-model="showSetup" persistent max-width="520">
+                <v-card flat rounded="lg" elevation="2">
+                    <v-card-title class="d-flex align-center pa-4 bg-primary-lighten-5">
+                        <v-icon start color="primary" class="mr-2">mdi-cogs</v-icon>
+                        <span class="text-h6 font-weight-medium text-primary">Configuração Inicial</span>
+                    </v-card-title>
+                    <v-divider />
+                    <v-card-text class="pt-6">
+                        <p class="text-body-2 text-grey-darken-1 mb-5">
+                            Informe um nome para seu controle financeiro e o valor total que será gerenciado.
+                        </p>
+                        <v-form ref="setupForm" v-model="setupFormValid">
+                            <v-text-field v-model="setup.title" label="Nome do Controle"
+                                :rules="[v => !!v || 'Nome é obrigatório']" required variant="outlined"
+                                density="compact" class="mb-4" prepend-inner-icon="mdi-label-outline" />
+                            <v-text-field v-model.number="setup.totalAmount" label="Saldo Inicial / Valor Total"
+                                prefix="R$" type="number"
+                                :rules="[v => v !== null && v !== '' || 'Valor é obrigatório', v => v >= 0 || 'Valor não pode ser negativo']"
+                                required variant="outlined" density="compact" prepend-inner-icon="mdi-currency-brl" />
+                        </v-form>
+                    </v-card-text>
+                    <v-divider />
+                    <v-card-actions class="pa-4">
+                        <v-spacer />
+                        <v-btn color="primary" :loading="loading" :disabled="!setupFormValid" @click="createBlob"
+                            variant="flat" class="text-none px-6" min-width="120">
+                            Iniciar Controle
+                        </v-btn>
+                    </v-card-actions>
+                </v-card>
+            </v-dialog>
+
+            <!-- Confirm Remove Dialog -->
+            <v-dialog v-model="showConfirmRemove" max-width="480">
+                <v-card flat rounded="lg" elevation="2">
+                    <v-card-title class="d-flex align-center pa-4 bg-error-lighten-5">
+                        <v-icon start color="error" class="mr-2">mdi-alert-octagon-outline</v-icon>
+                        <span class="text-h6 font-weight-medium text-error-darken-2">Confirmar Remoção</span>
+                    </v-card-title>
+                    <v-divider />
+                    <v-card-text class="pt-6 text-body-1 text-blue-grey-darken-3">
+                        <p class="mb-1">
+                            Remover a transação de
+                            <strong class="text-error-darken-1">{{ confirmPayment?.formattedAmount }}</strong>
+                        </p>
+                        <p>referente a <span class="font-weight-medium">{{ confirmPayment?.formattedDate }}</span>?</p>
+                        <p class="text-caption text-grey-darken-1 mt-4">Esta ação é irreversível.</p>
+                    </v-card-text>
+                    <v-divider />
+                    <v-card-actions class="pa-4">
+                        <v-btn variant="text" @click="showConfirmRemove = false" class="text-none">Cancelar</v-btn>
+                        <v-spacer />
+                        <v-btn color="error" :loading="loading" @click="executeRemovePayment" variant="flat"
+                            class="text-none px-6" min-width="120">
+                            Remover
+                        </v-btn>
+                    </v-card-actions>
+                </v-card>
+            </v-dialog>
+
+            <!-- Confirm Delete Bin Dialog -->
+            <v-dialog v-model="showConfirmDeleteBin" max-width="480">
+                <v-card flat rounded="lg" elevation="2">
+                    <v-card-title class="d-flex align-center pa-4 bg-error-lighten-5">
+                        <v-icon start color="error" class="mr-2">mdi-alert-decagram-outline</v-icon>
+                        <span class="text-h6 font-weight-medium text-error-darken-2">Exclusão Definitiva</span>
+                    </v-card-title>
+                    <v-divider />
+                    <v-card-text class="pt-6 text-body-1 text-blue-grey-darken-3">
+                        <p>Confirmar a exclusão de <strong class="text-error-darken-1">TODOS OS DADOS</strong> deste
+                            controle?</p>
+                        <p class="text-caption text-grey-darken-1 mt-4">Esta ação apagará todas as transações e
+                            configurações permanentemente.</p>
+                    </v-card-text>
+                    <v-divider />
+                    <v-card-actions class="pa-4">
+                        <v-btn variant="text" @click="showConfirmDeleteBin = false" class="text-none">Cancelar</v-btn>
+                        <v-spacer />
+                        <v-btn color="error" :loading="loading" @click="executeDeleteBin" variant="flat"
+                            class="text-none px-6" min-width="120">
+                            Excluir Tudo
+                        </v-btn>
+                    </v-card-actions>
+                </v-card>
+            </v-dialog>
+
+            <!-- Settings Dialog -->
+            <v-dialog v-model="showSettingsDialog" max-width="480">
+                <v-card flat rounded="lg" elevation="2">
+                    <v-card-title class="d-flex align-center pa-4 bg-primary-lighten-5">
+                        <v-icon start color="primary" class="mr-2">mdi-cog</v-icon>
+                        <span class="text-h6 font-weight-medium text-primary">Configurações</span>
+                        <v-spacer />
+                        <v-btn icon="mdi-close" variant="text" density="comfortable"
+                            @click="showSettingsDialog = false" />
+                    </v-card-title>
+                    <v-divider />
+                    <v-card-text class="pt-6">
+                        <v-btn color="error" variant="flat" class="text-none px-6" min-width="120"
+                            @click="confirmDeleteBin">
+                            Excluir Tudo
+                        </v-btn>
+                    </v-card-text>
+                </v-card>
+            </v-dialog>
+
+            <!-- Login Dialog -->
+            <v-dialog v-model="showLoginDialog" max-width="400" persistent>
+                <v-card flat rounded="lg" elevation="2">
+                    <v-card-title class="d-flex align-center pa-4 bg-primary-lighten-5">
+                        <v-icon start color="primary" class="mr-2">mdi-lock-outline</v-icon>
+                        <span class="text-h6 font-weight-medium text-primary">Login Administrativo</span>
+                    </v-card-title>
+                    <v-divider />
+                    <v-card-text class="pt-6">
+                        <v-form ref="loginForm" v-model="loginFormValid" @submit.prevent="handleLogin">
+                            <v-text-field v-model="loginPassword" label="Senha" type="password"
+                                :rules="[v => !!v || 'Senha é obrigatória']" required variant="outlined"
+                                density="compact" prepend-inner-icon="mdi-key" />
+                        </v-form>
+                    </v-card-text>
+                    <v-divider />
+                    <v-card-actions class="pa-4">
+                        <v-btn variant="text" @click="showLoginDialog = false" class="text-none">Cancelar</v-btn>
+                        <v-spacer />
+                        <v-btn color="primary" :disabled="!loginFormValid" @click="handleLogin" variant="flat"
+                            class="text-none px-6" min-width="120">
+                            Entrar
+                        </v-btn>
+                    </v-card-actions>
+                </v-card>
+            </v-dialog>
+        </v-main>
+    </v-app>
 </template>
 
-
 <script>
+    import { ref, reactive, computed, watch } from 'vue';
+    import { v4 as uuidv4 } from 'uuid';
+    import { useRoute, useRouter } from 'vue-router';
+
     export default {
-        data() {
-            return {
-                payments: [],
-                totalAmount: 0,
-                title: '',
-                newPayment: { amount: null, date: '', notes: '' },
-                loading: false,
-                showModal: false,
-                showSetup: false,
-                jsonBlobId: '',
-                isAdmin: new URLSearchParams(window.location.search).has('admin'),
-                apiKey: 'YOUR_API_KEY',
-                setup: {
-                    title: '',
-                    totalAmount: null
-                }
-            }
-        },
-        computed: {
-            totalPaid() {
-                return this.payments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0)
-            },
-            remainingAmount() {
-                return this.totalAmount - this.totalPaid
-            }
-        },
-        methods: {
-            async createBlobWithData() {
-                this.loading = true
-                const res = await fetch('https://jsonblob.com/api/jsonBlob', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-API-Key': this.apiKey },
-                    body: JSON.stringify({
-                        title: this.setup.title,
-                        totalAmount: this.setup.totalAmount,
-                        payments: []
+        setup() {
+            const JSONBIN_API_URL = 'https://api.jsonbin.io/v3/b';
+            const JSONBIN_MASTER_KEY = import.meta.env.VITE_JSONBIN_MASTER_KEY;
+
+            const route = useRoute();
+            const router = useRouter();
+
+            const jsonBinId = computed(() => route.params.id);
+
+            const payments = ref([]);
+            const totalAmount = ref(0);
+            const title = ref('');
+            const newPayment = reactive({ amount: null, date: '', notes: '' });
+            const loading = ref(false);
+            const showModal = ref(false);
+            const showSetup = ref(false);
+            const showConfirmRemove = ref(false);
+            const showConfirmDeleteBin = ref(false);
+            const confirmPayment = ref(null);
+            const setup = reactive({ title: '', totalAmount: null });
+            const dateMenu = ref(false);
+            const setupForm = ref(null);
+            const form = ref(null);
+            const formValid = ref(false);
+            const setupFormValid = ref(false);
+            const snackbar = reactive({ show: false, message: '', color: 'success' });
+            const activePanel = ref(null);
+            const isAuthenticated = ref(false);
+            const showLoginDialog = ref(false);
+            const loginPassword = ref('');
+            const loginForm = ref(null);
+            const loginFormValid = ref(false);
+            const showSettingsDialog = ref(false);
+            let lastSavedData = '';
+
+            // Computed properties
+            const totalPaid = computed(() => payments.value.reduce((sum, p) => sum + p.amount, 0));
+            const percentPaid = computed(() =>
+                totalAmount.value > 0 ? Math.round((totalPaid.value / totalAmount.value) * 100) : 0
+            );
+            const summaryItems = computed(() => [
+                {
+                    label: 'Devido',
+                    value: formatCurrency(totalAmount.value),
+                    icon: 'mdi-cash-multiple',
+                    color: 'primary',
+                },
+                { label: 'Pago', value: formatCurrency(totalPaid.value), icon: 'mdi-check-circle', color: 'success' },
+                {
+                    label: 'Falta',
+                    value: formatCurrency(totalAmount.value - totalPaid.value),
+                    icon: 'mdi-trending-down',
+                    color: 'warning',
+                    showProgress: true,
+                },
+            ]);
+
+            const groupedPayments = computed(() =>
+                payments.value.reduce((acc, p) => {
+                    const month = new Date(p.date).toLocaleDateString('pt-BR', { month: 'numeric', year: 'numeric' });
+                    if (!acc[month]) acc[month] = { total: 0, items: [] };
+                    acc[month].total += p.amount;
+                    acc[month].items.push({
+                        ...p,
+                        formattedAmount: formatCurrency(p.amount),
+                        formattedDate: formatDate(p.date),
+                        notes: p.notes,
+                    });
+                    return acc;
+                }, {})
+            );
+
+            const sortedGroupedPayments = computed(() => {
+                return Object.entries(groupedPayments.value)
+                    .map(([month, group]) => {
+                        const [mes, ano] = month.split('/');
+                        const monthNumber = getMonthNumber(mes);
+                        const date = new Date(`${ano}-${monthNumber}-01`);
+                        const sortedItems = [...group.items].sort((a, b) => new Date(b.date) - new Date(a.date));
+                        return [date, { ...group, items: sortedItems, label: month }];
                     })
-                })
-                const location = res.headers.get('Location')
-                const id = location?.split('/').pop()
-                if (id) {
-                    const url = new URL(window.location.href)
-                    url.searchParams.set('id', id)
-                    url.searchParams.delete('add')
-                    window.history.replaceState({}, '', url.toString())
-                    this.jsonBlobId = id
-                    this.title = this.setup.title
-                    this.totalAmount = this.setup.totalAmount
-                    this.showSetup = false
+                    .sort((a, b) => b[0] - a[0])
+                    .map(([_date, group]) => [group.label, group]);
+            });
+
+            function getMonthNumber(mes) {
+                const month = parseInt(mes, 10).toString().padStart(2, '0');
+                return month;
+            }
+
+            function formatCurrency(value) {
+                return `R$ ${value?.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
+            }
+
+            function formatDate(date) {
+                return new Date(date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            }
+
+            function handleLogin() {
+                if (!loginFormValid.value) return;
+                if (loginPassword.value === 'Ever2208') {
+                    isAuthenticated.value = true;
+                    showLoginDialog.value = false;
+                    loginPassword.value = '';
+                    snackbar.message = 'Autenticação bem-sucedida';
+                    snackbar.color = 'success';
+                    snackbar.show = true;
+                } else {
+                    snackbar.message = 'Senha incorreta';
+                    snackbar.color = 'error';
+                    snackbar.show = true;
                 }
-                this.loading = false
-            },
-            async loadPayments() {
-                if (!this.jsonBlobId) return
-                this.loading = true
-                const res = await fetch(`https://jsonblob.com/api/jsonBlob/${this.jsonBlobId}`, {
-                    headers: { 'X-API-Key': this.apiKey }
-                })
-                const data = await res.json()
-                this.payments = data.payments || []
-                this.totalAmount = data.totalAmount || 0
-                this.title = data.title || 'Controle'
-                this.loading = false
-            },
-            async savePayments() {
-                if (!this.jsonBlobId) return
-                this.loading = true
-                await fetch(`https://jsonblob.com/api/jsonBlob/${this.jsonBlobId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json', 'X-API-Key': this.apiKey },
-                    body: JSON.stringify({ payments: this.payments, totalAmount: this.totalAmount, title: this.title })
-                })
-                this.loading = false
-            },
-            async addPayment() {
-                if (!this.newPayment.amount || !this.newPayment.date) return
-                this.payments.push({ ...this.newPayment, createdAt: new Date().toISOString() })
-                await this.savePayments()
-                this.newPayment = { amount: null, date: this.getLocalDate(), notes: '' }
-                this.showModal = false
-            },
-            async removePayment(index) {
-                if (!confirm('Excluir pagamento?')) return
-                this.payments.splice(index, 1)
-                await this.savePayments()
-            },
-            formatCurrency(value) {
-                return (value || 0).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')
-            },
-            formatDate(date) {
-                const d = new Date(date)
-                return d.toLocaleDateString('pt-BR')
-            },
-            getLocalDate() {
-                const d = new Date()
-                return d.toISOString().split('T')[0]
             }
+
+            async function createBlob() {
+                if (!setupFormValid.value) return;
+                loading.value = true;
+                try {
+                    const res = await fetch(JSONBIN_API_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Master-Key': JSONBIN_MASTER_KEY,
+                            'X-Bin-Private': 'true',
+                        },
+                        body: JSON.stringify({ title: setup.title, totalAmount: setup.totalAmount, payments: [] }),
+                    });
+                    const data = await res.json();
+
+                    router.replace({ path: `/${data.metadata.id}` });
+
+                    title.value = setup.title;
+                    totalAmount.value = setup.totalAmount;
+                    showSetup.value = false;
+                    await loadData();
+                } finally {
+                    loading.value = false;
+                }
+            }
+
+            async function loadData() {
+                if (!jsonBinId.value) return;
+                loading.value = true;
+                try {
+                    const res = await fetch(`${JSONBIN_API_URL}/${jsonBinId.value}/latest`, {
+                        headers: { 'X-Master-Key': JSONBIN_MASTER_KEY },
+                    });
+                    const data = await res.json();
+                    const record = data.record;
+                    payments.value =
+                        record.payments?.map((p) => ({
+                            id: p.id || uuidv4(),
+                            amount: parseFloat(p.amount),
+                            date: p.date,
+                            notes: p.notes,
+                        })) || [];
+                    totalAmount.value = record.totalAmount || 0;
+                    title.value = record.title || '';
+                } finally {
+                    loading.value = false;
+                }
+            }
+
+            async function saveData() {
+                if (!jsonBinId.value) return;
+                const currentData = JSON.stringify({
+                    payments: payments.value,
+                    totalAmount: totalAmount.value,
+                    title: title.value,
+                });
+                if (currentData === lastSavedData) return;
+                loading.value = true;
+                try {
+                    await fetch(`${JSONBIN_API_URL}/${jsonBinId.value}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Master-Key': JSONBIN_MASTER_KEY,
+                        },
+                        body: currentData,
+                    });
+                    lastSavedData = currentData;
+                } finally {
+                    loading.value = false;
+                }
+            }
+
+            async function addPayment() {
+                if (!formValid.value || !isAuthenticated.value) return;
+                loading.value = true;
+                try {
+                    payments.value.push({
+                        id: uuidv4(),
+                        amount: newPayment.amount,
+                        date: newPayment.date,
+                        notes: newPayment.notes,
+                    });
+                    await saveData();
+                    newPayment.amount = null;
+                    newPayment.date = '';
+                    newPayment.notes = '';
+                    showModal.value = false;
+                    snackbar.message = 'Pagamento adicionado com sucesso';
+                    snackbar.color = 'success';
+                    snackbar.show = true;
+                } finally {
+                    loading.value = false;
+                }
+            }
+
+            function confirmRemovePayment(payment) {
+                if (!isAuthenticated.value) return;
+                confirmPayment.value = payment;
+                showConfirmRemove.value = true;
+            }
+
+            async function executeRemovePayment() {
+                if (!confirmPayment.value || !isAuthenticated.value) return;
+                loading.value = true;
+                try {
+                    const index = payments.value.findIndex((p) => p.id === confirmPayment.value.id);
+                    if (index !== -1) payments.value.splice(index, 1);
+                    await saveData();
+                    snackbar.message = 'Pagamento removido com sucesso';
+                    snackbar.color = 'success';
+                    snackbar.show = true;
+                } finally {
+                    loading.value = false;
+                    showConfirmRemove.value = false;
+                    confirmPayment.value = null;
+                }
+            }
+
+            function cancelNewPayment() {
+                newPayment.amount = null;
+                newPayment.date = '';
+                newPayment.notes = '';
+                showModal.value = false;
+                form.value?.resetValidation();
+            }
+
+            function confirmDeleteBin() {
+                if (!isAuthenticated.value) return;
+                showConfirmDeleteBin.value = true;
+            }
+
+            async function executeDeleteBin() {
+                if (!jsonBinId.value || !isAuthenticated.value) return;
+                loading.value = true;
+                try {
+                    await fetch(`${JSONBIN_API_URL}/${jsonBinId.value}`, {
+                        method: 'DELETE',
+                        headers: { 'X-Master-Key': JSONBIN_MASTER_KEY },
+                    });
+
+                    router.replace({ path: '/' });
+
+                    payments.value = [];
+                    totalAmount.value = 0;
+                    title.value = '';
+                    showSetup.value = true;
+                    snackbar.message = 'Bin excluído com sucesso';
+                    snackbar.color = 'success';
+                    snackbar.show = true;
+                } finally {
+                    loading.value = false;
+                    showConfirmDeleteBin.value = false;
+                }
+            }
+
+            // Garantir que a rota esteja resolvida antes de inicializar
+            router.isReady().then(() => {
+                watch(
+                    () => route.params.id,
+                    (newId) => {
+                        console.log('route.params.id changed:', newId);
+                        if (newId) {
+                            loadData();
+                        } else {
+                            showSetup.value = true;
+                        }
+                    },
+                    { immediate: true }
+                );
+            });
+
+            return {
+                payments,
+                totalAmount,
+                title,
+                newPayment,
+                loading,
+                showModal,
+                showSetup,
+                showConfirmRemove,
+                showConfirmDeleteBin,
+                confirmPayment,
+                dateMenu,
+                setup,
+                setupForm,
+                form,
+                formValid,
+                setupFormValid,
+                snackbar,
+                activePanel,
+                summaryItems,
+                percentPaid,
+                sortedGroupedPayments,
+                formatCurrency,
+                formatDate,
+                addPayment,
+                confirmRemovePayment,
+                executeRemovePayment,
+                cancelNewPayment,
+                createBlob,
+                confirmDeleteBin,
+                executeDeleteBin,
+                isAuthenticated,
+                showLoginDialog,
+                loginPassword,
+                loginForm,
+                loginFormValid,
+                showSettingsDialog,
+                handleLogin,
+            };
         },
-        async mounted() {
-            const url = new URL(window.location.href)
-            const params = url.searchParams
-            if (params.has('add')) {
-                this.showSetup = true
-            } else if (params.has('id')) {
-                this.jsonBlobId = params.get('id')
-                await this.loadPayments()
-            }
-            this.newPayment.date = this.getLocalDate()
-        }
-    }
+    };
 </script>
