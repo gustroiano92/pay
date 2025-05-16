@@ -79,7 +79,7 @@
                                             }}
                                         </v-col>
                                         <v-col cols="4" class="text-right">
-                                            <v-chip color="primary" variant="flat" size="small"
+                                            <v-chip label color="primary" variant="outlined" size="small"
                                                 class="font-weight-bold">
                                                 {{ formatCurrency(group.total) }}
                                             </v-chip>
@@ -597,7 +597,6 @@
                 watch(
                     () => route.params.id,
                     (newId) => {
-                        console.log('route.params.id changed:', newId);
                         if (newId) {
                             loadData();
                         } else {
