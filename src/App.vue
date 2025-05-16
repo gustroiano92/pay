@@ -1,9 +1,7 @@
 <template>
     <v-app>
         <v-toolbar flat density="comfortable" class="bg-white" elevation="1">
-            <v-avatar size="36" class="ml-4 mr-3" color="primary-lighten-4">
-                <v-icon icon="mdi-finance" color="primary" size="24" />
-            </v-avatar>
+
             <v-toolbar-title class="text-h6 font-weight-light text-grey-darken-3">
                 {{ title || 'Pay' }}
             </v-toolbar-title>
