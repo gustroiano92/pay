@@ -88,34 +88,44 @@
                                 </v-container>
                             </v-expansion-panel-title>
                             <v-expansion-panel-text>
-                                <v-card flat>
+                                <v-card flat class="pa-2">
                                     <v-list density="compact">
                                         <template v-for="(p, idx) in group.items" :key="p.id">
-                                            <v-list-item class="py-2">
+                                            <v-list-item class="py-3">
+
+
                                                 <template #title>
-                                                    <span class="text-body-1">{{ p.formattedAmount }}</span>
-                                                </template>
-                                                <template #subtitle>
-                                                    <div class="d-flex align-center gap-2">
-                                                        <span class="text-caption">{{ p.formattedDate }}</span><br>
-                                                        <p v-if="p.notes" class="text-caption d-flex align-center">
-                                                            <v-icon size="small"
-                                                                class="mr-1">mdi-alert-circle-outline</v-icon>
-                                                            {{ p.notes }}
-                                                        </p>
+                                                    <div class="d-flex justify-space-between align-center">
+                                                        <span class="text-subtitle-1 font-weight-medium">{{
+                                                            p.formattedAmount }}</span>
+                                                        <v-btn v-if="isAuthenticated" icon="mdi-trash-can-outline"
+                                                            color="error" variant="text" size="small"
+                                                            @click.stop="confirmRemovePayment(p)" />
                                                     </div>
                                                 </template>
-                                                <template v-if="isAuthenticated" #append>
-                                                    <v-btn icon="mdi-trash-can-outline" color="error" variant="text"
-                                                        size="small" @click.stop="confirmRemovePayment(p)" />
+
+                                                <template #subtitle>
+                                                    <div class="d-flex flex-column">
+                                                        <span class="text-caption text--secondary">{{ p.formattedDate
+                                                            }}</span>
+                                                        <span v-if="p.notes"
+                                                            class="text-caption mt-1 text--primary d-flex align-center">
+                                                            <v-chip label append-icon="mdi-alert-circle-outline"
+                                                                variant="outlined" size="x-small">
+                                                                {{ p.notes }}</v-chip>
+                                                        </span>
+                                                    </div>
                                                 </template>
                                             </v-list-item>
-                                            <v-divider v-if="idx < group.items.length - 1" class="mx-4 my-1"
+
+                                            <v-divider v-if="idx < group.items.length - 1" class="mx-4 my-2"
                                                 thickness="1" />
                                         </template>
                                     </v-list>
                                 </v-card>
                             </v-expansion-panel-text>
+
+
                         </v-expansion-panel>
                     </v-expansion-panels>
                 </section>
@@ -649,3 +659,8 @@
         },
     };
 </script>
+<style scoped>
+    * {
+        text-transform: uppercase !important;
+    }
+</style>
