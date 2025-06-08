@@ -97,7 +97,7 @@
                                                 </template>
                                                 <template #subtitle>
                                                     <div class="d-flex align-center gap-2">
-                                                        <span class="text-caption">{{ p.formattedDate }}</span>
+                                                        <span class="text-caption">{{ p.formattedDate }}</span><br>
                                                         <p v-if="p.notes" class="text-caption d-flex align-center">
                                                             <v-icon size="small"
                                                                 class="mr-1">mdi-alert-circle-outline</v-icon>
