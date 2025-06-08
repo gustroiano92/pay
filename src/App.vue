@@ -98,11 +98,11 @@
                                                 <template #subtitle>
                                                     <div class="d-flex align-center gap-2">
                                                         <span class="text-caption">{{ p.formattedDate }}</span>
-                                                        <span v-if="p.notes" class="text-caption d-flex align-center">
+                                                        <p v-if="p.notes" class="text-caption d-flex align-center">
                                                             <v-icon size="small"
-                                                                class="mr-1">mdi-comment-text-outline</v-icon>
+                                                                class="mr-1">mdi-alert-circle-outline</v-icon>
                                                             {{ p.notes }}
-                                                        </span>
+                                                        </p>
                                                     </div>
                                                 </template>
                                                 <template v-if="isAuthenticated" #append>
